@@ -12,20 +12,31 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.miniproject.ui.theme.MiniProjectTheme
+import com.google.firebase.firestore.FirebaseFirestore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            MiniProjectTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+
+        val db = FirebaseFirestore.getInstance()
+
+        // Test write
+        val testData = hashMapOf(
+            "message" to "Hello Firestore!",
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        db.collection("test")
+            .add(testData)
+            .addOnSuccessListener {
+                Log.d("FIRESTORE", "Write successful!")
             }
+            .addOnFailureListener { e ->
+                Log.w("FIRESTORE", "Error writing document", e)
+            }
+
+        setContent {
+            // your compose app content
         }
     }
 }
