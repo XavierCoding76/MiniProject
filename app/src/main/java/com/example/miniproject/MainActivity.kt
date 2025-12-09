@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.miniproject.admin.AdminScreen
+import com.example.miniproject.booking.Navigation.AppNavGraph
 import com.example.miniproject.ui.theme.MiniProjectTheme
 
 class MainActivity : ComponentActivity() {
@@ -22,12 +23,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+            /*Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                 // Pass the padding to the AppNavigation function
                 AppNavigation(
                     modifier = Modifier.padding(innerPadding),
                 )
-            }
+            }*/
+
+            val navController = rememberNavController()
+            AppNavGraph(navController)
         }
     }
 
