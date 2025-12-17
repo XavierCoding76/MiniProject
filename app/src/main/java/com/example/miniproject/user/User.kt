@@ -1,7 +1,5 @@
 package com.example.miniproject.user
 
-import com.google.firebase.firestore.DocumentId
-
 data class User(
 
     @DocumentId
@@ -9,5 +7,6 @@ data class User(
     val displayId: String = "", // Corrected to camelCase for consistency
     val email: String = "",
     val name: String = "",
-    val role: String = ""
+    val userType: String = "student", // Default user type
+    val displayId: String
 )
