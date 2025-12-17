@@ -5,8 +5,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.miniproject.components.SearchScreen
 import com.example.miniproject.components.SearchResultItemData
+import com.example.miniproject.components.SearchScreen
 import com.example.miniproject.components.SearchResultList
 
 @Composable
@@ -30,7 +30,8 @@ fun SearchBookingByUserScreen(navController: NavController, viewModel: SearchBoo
             val mappedResults = searchResults?.map {
                 SearchResultItemData(
                     id = it.id,
-                    title = "Booking ID: ${it.id.take(6).uppercase()}"
+                    title = "Booking ID: ${it.id.take(6).uppercase()}",
+                    subtitle = "User ID: ${it.userID} • Facility: ${it.facilityID} • ${it.bookedHours}h"
                 )
             }
 

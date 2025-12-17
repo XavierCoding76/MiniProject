@@ -1,5 +1,6 @@
 package com.example.miniproject
 
+
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -27,6 +28,7 @@ import com.example.miniproject.admin.facilityAdmin.SubVenuesScreen
 import com.example.miniproject.admin.userAdmin.AdminStaffScreen
 import com.example.miniproject.admin.userAdmin.AdminStudentScreen
 import com.example.miniproject.admin.userAdmin.AdminUserScreen
+import com.example.miniproject.admin.userAdmin.UserInformationScreen
 import com.example.miniproject.payment.PaymentScreen
 
 @Composable
@@ -45,17 +47,24 @@ fun AppNavigation(modifier: Modifier = Modifier) {
             PaymentScreen()
         }
 
-        composable("user_management") { 
+        composable("user_management") {
             AdminUserScreen(navController = navController)
         }
 
+        composable("admin_students") {
+            AdminStudentScreen(navController = navController)
+        }
+
+        composable("admin_staff") {
+            AdminStaffScreen(navController = navController)
+        }
+
+        // Legacy routes for backward compatibility
         composable("student_list") {
             AdminStudentScreen(navController = navController)
         }
 
-        composable("staff_list") {
-            AdminStaffScreen(navController = navController)
-        }
+
 
         composable("booking_management") {
             AdminBookingScreen(navController = navController)
@@ -134,6 +143,7 @@ fun AppNavigation(modifier: Modifier = Modifier) {
             // TODO: Replace with the actual Report Generation screen
             Text("Report Generation Screen")
         }
+
         composable(
             route = "add_facility/{buildingType}",
             arguments = listOf(navArgument("buildingType") { type = NavType.StringType })
@@ -142,6 +152,25 @@ fun AppNavigation(modifier: Modifier = Modifier) {
             AddFacilityScreen(
                 navController = navController,
                 buildingType = buildingType
+            )
+        }
+
+        // In your NavHost setup
+        // In your NavHost setup
+        composable(
+            route = "user_information/{userId}/{userType}",
+            arguments = listOf(
+                navArgument("userId") { type = NavType.StringType },
+                navArgument("userType") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            val userType = backStackEntry.arguments?.getString("userType") ?: "student"
+
+            UserInformationScreen(
+                navController = navController,
+                userId = userId,
+                userType = userType
             )
         }
     }

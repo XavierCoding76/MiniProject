@@ -2,6 +2,7 @@ package com.example.miniproject.admin.facilityAdmin
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,8 +40,10 @@ fun AddFacilityScreen(
     var facilityName by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
+    var capacityType by remember { mutableStateOf("range") } // "range" or "single"
     var minCapacity by remember { mutableStateOf("") }
     var maxCapacity by remember { mutableStateOf("") }
+    var singleCapacity by remember { mutableStateOf("") }
     var startTime by remember { mutableStateOf("0800") }
     var endTime by remember { mutableStateOf("2200") }
     var showTimePickerDialog by remember { mutableStateOf(false) }
@@ -54,6 +57,7 @@ fun AddFacilityScreen(
     var locationTouched by remember { mutableStateOf(false) }
     var minCapacityTouched by remember { mutableStateOf(false) }
     var maxCapacityTouched by remember { mutableStateOf(false) }
+    var singleCapacityTouched by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -67,6 +71,49 @@ fun AddFacilityScreen(
         "L" -> "Library"
         else -> "Facility"
     }
+
+    // Calculate capacity values for validation
+    val minNum = minCapacity.toIntOrNull() ?: 0
+    val maxNum = maxCapacity.toIntOrNull() ?: 0
+    val singleNum = singleCapacity.toIntOrNull() ?: 0
+
+    // Validation: Must be greater than 0
+    val hasMinCapacityError = when (capacityType) {
+        "range" -> minCapacityTouched && (minCapacity.isBlank() || minNum <= 0)
+        else -> false
+    }
+
+    val hasMaxCapacityError = when (capacityType) {
+        "range" -> maxCapacityTouched && (maxCapacity.isBlank() || maxNum <= 0)
+        else -> false
+    }
+
+    val hasSingleCapacityError = when (capacityType) {
+        "single" -> singleCapacityTouched && (singleCapacity.isBlank() || singleNum <= 0)
+        else -> false
+    }
+
+    val hasRangeCapacityError = when (capacityType) {
+        "range" -> maxNum < minNum && maxCapacity.isNotEmpty() && minCapacity.isNotEmpty()
+        else -> false
+    }
+
+    val capacityErrorTouched = when (capacityType) {
+        "range" -> minCapacityTouched || maxCapacityTouched
+        "single" -> singleCapacityTouched
+        else -> false
+    }
+
+    // Check if form is valid
+    val isFormValid = facilityName.isNotBlank() &&
+            description.isNotBlank() &&
+            location.isNotBlank() &&
+            when (capacityType) {
+                "range" -> minCapacity.isNotBlank() && maxCapacity.isNotBlank() &&
+                        minNum > 0 && maxNum > 0 && !hasRangeCapacityError
+                "single" -> singleCapacity.isNotBlank() && singleNum > 0
+                else -> false
+            }
 
     if (showTimePickerDialog) {
         TimePickerDialog(
@@ -85,12 +132,13 @@ fun AddFacilityScreen(
 
     if (showConfirmDialog) {
         ConfirmAddFacilityDialog(
+            capacityType = capacityType,
             facilityData = mapOf(
                 "name" to facilityName,
                 "description" to description,
                 "location" to location,
-                "minNum" to minCapacity,
-                "maxNum" to maxCapacity,
+                "minNum" to if (capacityType == "range") minCapacity else singleCapacity,
+                "maxNum" to if (capacityType == "range") maxCapacity else singleCapacity,
                 "startTime" to startTime,
                 "endTime" to endTime
             ),
@@ -105,8 +153,8 @@ fun AddFacilityScreen(
                         "name" to facilityName,
                         "description" to description,
                         "location" to location,
-                        "minNum" to minCapacity,
-                        "maxNum" to maxCapacity,
+                        "minNum" to if (capacityType == "range") minCapacity else singleCapacity,
+                        "maxNum" to if (capacityType == "range") maxCapacity else singleCapacity,
                         "startTime" to startTime,
                         "endTime" to endTime
                     )
@@ -310,93 +358,203 @@ fun AddFacilityScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Capacity Row
+                // Capacity Type Radio Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = minCapacity,
-                            onValueChange = {
-                                if (it.all { char -> char.isDigit() } && it.length <= 3) {
-                                    minCapacity = it
-                                }
-                            },
-                            label = { Text("Min") },
-                            placeholder = { Text("10") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { capacityType = "range" }
+                    ) {
+                        RadioButton(
+                            selected = capacityType == "range",
+                            onClick = { capacityType = "range" }
+                        )
+                        Text(
+                            text = "Min - Max Range",
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { capacityType = "single" }
+                    ) {
+                        RadioButton(
+                            selected = capacityType == "single",
+                            onClick = { capacityType = "single" }
+                        )
+                        Text(
+                            text = "Single Capacity",
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Capacity Input based on selection
+                when (capacityType) {
+                    "range" -> {
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = !isLoading,
-                            isError = minCapacityTouched && minCapacity.isBlank(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = if (minCapacityTouched && minCapacity.isBlank()) Color.Red else Color(0xFF6A5ACD),
-                                unfocusedBorderColor = if (minCapacityTouched && minCapacity.isBlank()) Color.Red else Color.Gray
-                            ),
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                                .also { interactionSource ->
-                                    LaunchedEffect(interactionSource) {
-                                        interactionSource.interactions.collect { interaction ->
-                                            if (interaction is androidx.compose.foundation.interaction.FocusInteraction.Unfocus) {
-                                                minCapacityTouched = true
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = minCapacity,
+                                    onValueChange = {
+                                        if (it.all { char -> char.isDigit() } && it.length <= 3) {
+                                            minCapacity = it
+                                        }
+                                    },
+                                    label = { Text("Min") },
+                                    placeholder = { Text("10") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !isLoading,
+                                    isError = hasMinCapacityError ||
+                                            (capacityErrorTouched && hasRangeCapacityError),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = when {
+                                            hasMinCapacityError -> Color.Red
+                                            capacityErrorTouched && hasRangeCapacityError -> Color.Red
+                                            else -> Color(0xFF6A5ACD)
+                                        },
+                                        unfocusedBorderColor = when {
+                                            hasMinCapacityError -> Color.Red
+                                            capacityErrorTouched && hasRangeCapacityError -> Color.Red
+                                            else -> Color.Gray
+                                        }
+                                    ),
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                        .also { interactionSource ->
+                                            LaunchedEffect(interactionSource) {
+                                                interactionSource.interactions.collect { interaction ->
+                                                    if (interaction is androidx.compose.foundation.interaction.FocusInteraction.Unfocus) {
+                                                        minCapacityTouched = true
+                                                    }
+                                                }
                                             }
                                         }
-                                    }
+                                )
+                                if (hasMinCapacityError) {
+                                    Text(
+                                        text = if (minCapacity.isBlank()) "Required" else "Must be greater than 0",
+                                        color = Color.Red,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                    )
                                 }
-                        )
-                        if (minCapacityTouched && minCapacity.isBlank()) {
+                            }
+
                             Text(
-                                text = "Required",
+                                text = "to",
+                                modifier = Modifier
+                                    .align(Alignment.CenterVertically)
+                                    .padding(top = 8.dp)
+                            )
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = maxCapacity,
+                                    onValueChange = {
+                                        if (it.all { char -> char.isDigit() } && it.length <= 3) {
+                                            maxCapacity = it
+                                        }
+                                    },
+                                    label = { Text("Max") },
+                                    placeholder = { Text("50") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !isLoading,
+                                    isError = hasMaxCapacityError ||
+                                            (capacityErrorTouched && hasRangeCapacityError),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = when {
+                                            hasMaxCapacityError -> Color.Red
+                                            capacityErrorTouched && hasRangeCapacityError -> Color.Red
+                                            else -> Color(0xFF6A5ACD)
+                                        },
+                                        unfocusedBorderColor = when {
+                                            hasMaxCapacityError -> Color.Red
+                                            capacityErrorTouched && hasRangeCapacityError -> Color.Red
+                                            else -> Color.Gray
+                                        }
+                                    ),
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                        .also { interactionSource ->
+                                            LaunchedEffect(interactionSource) {
+                                                interactionSource.interactions.collect { interaction ->
+                                                    if (interaction is androidx.compose.foundation.interaction.FocusInteraction.Unfocus) {
+                                                        maxCapacityTouched = true
+                                                    }
+                                                }
+                                            }
+                                        }
+                                )
+                                if (hasMaxCapacityError) {
+                                    Text(
+                                        text = if (maxCapacity.isBlank()) "Required" else "Must be greater than 0",
+                                        color = Color.Red,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Show range capacity error message
+                        if (capacityErrorTouched && hasRangeCapacityError) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Maximum capacity cannot be smaller than minimum capacity",
                                 color = Color.Red,
                                 fontSize = 12.sp,
-                                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                modifier = Modifier.padding(start = 16.dp)
                             )
                         }
                     }
 
-                    Text(
-                        text = "to",
-                        modifier = Modifier
-                            .align(Alignment.CenterVertically)
-                            .padding(top = 8.dp)
-                    )
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = maxCapacity,
-                            onValueChange = {
-                                if (it.all { char -> char.isDigit() } && it.length <= 3) {
-                                    maxCapacity = it
-                                }
-                            },
-                            label = { Text("Max") },
-                            placeholder = { Text("50") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isLoading,
-                            isError = maxCapacityTouched && maxCapacity.isBlank(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = if (maxCapacityTouched && maxCapacity.isBlank()) Color.Red else Color(0xFF6A5ACD),
-                                unfocusedBorderColor = if (maxCapacityTouched && maxCapacity.isBlank()) Color.Red else Color.Gray
-                            ),
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                                .also { interactionSource ->
-                                    LaunchedEffect(interactionSource) {
-                                        interactionSource.interactions.collect { interaction ->
-                                            if (interaction is androidx.compose.foundation.interaction.FocusInteraction.Unfocus) {
-                                                maxCapacityTouched = true
+                    "single" -> {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = singleCapacity,
+                                onValueChange = {
+                                    if (it.all { char -> char.isDigit() } && it.length <= 3) {
+                                        singleCapacity = it
+                                    }
+                                },
+                                label = { Text("Capacity") },
+                                placeholder = { Text("50") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !isLoading,
+                                isError = hasSingleCapacityError,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = if (hasSingleCapacityError) Color.Red else Color(0xFF6A5ACD),
+                                    unfocusedBorderColor = if (hasSingleCapacityError) Color.Red else Color.Gray
+                                ),
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                    .also { interactionSource ->
+                                        LaunchedEffect(interactionSource) {
+                                            interactionSource.interactions.collect { interaction ->
+                                                if (interaction is androidx.compose.foundation.interaction.FocusInteraction.Unfocus) {
+                                                    singleCapacityTouched = true
+                                                }
                                             }
                                         }
                                     }
-                                }
-                        )
-                        if (maxCapacityTouched && maxCapacity.isBlank()) {
-                            Text(
-                                text = "Required",
-                                color = Color.Red,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
                             )
+                            if (hasSingleCapacityError) {
+                                Text(
+                                    text = if (singleCapacity.isBlank()) "Capacity is required" else "Must be greater than 0",
+                                    color = Color.Red,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -488,15 +646,23 @@ fun AddFacilityScreen(
                     Spacer(modifier = Modifier.width(16.dp))
 
                     Button(
-                        onClick = { showConfirmDialog = true },
+                        onClick = {
+                            // Mark all fields as touched when user tries to submit
+                            facilityNameTouched = true
+                            descriptionTouched = true
+                            locationTouched = true
+                            minCapacityTouched = true
+                            maxCapacityTouched = true
+                            singleCapacityTouched = true
+
+                            // Only show confirm dialog if form is valid
+                            if (isFormValid) {
+                                showConfirmDialog = true
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5ACD)),
                         modifier = Modifier.weight(1f),
-                        enabled = !isLoading &&
-                                facilityName.isNotBlank() &&
-                                description.isNotBlank() &&
-                                location.isNotBlank() &&
-                                minCapacity.isNotBlank() &&
-                                maxCapacity.isNotBlank()
+                        enabled = !isLoading && isFormValid
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
@@ -516,6 +682,7 @@ fun AddFacilityScreen(
 
 @Composable
 fun ConfirmAddFacilityDialog(
+    capacityType: String,
     facilityData: Map<String, String>,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
@@ -543,8 +710,8 @@ fun ConfirmAddFacilityDialog(
                             "name" -> "Name"
                             "description" -> "Description"
                             "location" -> "Location"
-                            "minNum" -> "Min Capacity"
-                            "maxNum" -> "Max Capacity"
+                            "minNum" -> if (capacityType == "range") "Min Capacity" else "Capacity"
+                            "maxNum" -> if (capacityType == "range") "Max Capacity" else "Capacity"
                             "startTime" -> "Start Time"
                             "endTime" -> "End Time"
                             else -> key

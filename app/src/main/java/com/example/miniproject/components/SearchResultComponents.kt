@@ -31,7 +31,8 @@ import androidx.compose.ui.unit.dp
  */
 data class SearchResultItemData(
     val id: String,
-    val title: String
+    val title: String,
+    val subtitle: String // Add this line
 )
 
 /**

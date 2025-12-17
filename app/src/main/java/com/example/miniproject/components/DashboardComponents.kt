@@ -7,13 +7,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
@@ -54,6 +59,9 @@ fun Dashboard(
     onBackClick: (() -> Unit)? = null, // Made optional
     bottomContent: (@Composable () -> Unit)? = null // Optional slot for bottom content
 ) {
+    // Check if we have 5 or fewer items
+    val shouldCenterItems = items.size <= 5
+
     // Outermost Box with the purple gradient background
     Box(
         modifier = modifier
@@ -74,25 +82,67 @@ fun Dashboard(
                 .padding(top = 140.dp)
                 .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                 .background(Color.White)
-                .padding(16.dp)
         ) {
-            // Box to center the main items in the available space
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            if (shouldCenterItems) {
+                // For 5 or fewer items: Centered column with vertical scroll
                 Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    items.forEachIndexed { index, item ->
+                        DashboardItem(
+                            item = item,
+                            onClick = { onItemClick(item) }
+                        )
+
+                        // Add spacer between items (except after the last one)
+                        if (index < items.size - 1) {
+                            Spacer(modifier = Modifier.height(24.dp))
+                        }
+                    }
+                }
+            } else {
+                // For more than 5 items: LazyColumn starting from top
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    items.forEach { item ->
+                    items(items) { item ->
                         DashboardItem(
                             item = item,
                             onClick = { onItemClick(item) }
                         )
                     }
+
+                    // Add bottom content if provided
+                    if (bottomContent != null) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp)
+                            ) {
+                                bottomContent()
+                            }
+                        }
+                    }
                 }
             }
-            // Slot for the bottom content, like a logout button
-            if (bottomContent != null) {
-                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+
+            // Bottom content for centered layout (5 or fewer items)
+            if (shouldCenterItems && bottomContent != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
                     bottomContent()
                 }
             }
@@ -149,7 +199,7 @@ fun DashboardItem(
                 contentDescription = null, // Decorative
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxWidth(0.4f) 
+                    .fillMaxWidth(0.4f)
                     .fillMaxHeight()
                     .align(Alignment.CenterStart)
             )
@@ -169,7 +219,7 @@ fun DashboardItem(
                         )
                     )
             ) {
-                 Column(
+                Column(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .padding(end = 24.dp)

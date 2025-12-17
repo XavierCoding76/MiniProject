@@ -3,8 +3,6 @@ package com.example.miniproject.admin.facilityAdmin
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
@@ -75,21 +73,14 @@ fun ArenaTarumtScreen(navController: NavController, viewModel: FacilityListViewM
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Wrap Dashboard in a scrollable container
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Dashboard(
-                    title = "Arena",
-                    items = items,
-                    onItemClick = { item ->
-                        navController.navigate(item.destinationRoute)
-                    },
-                    onBackClick = { navController.popBackStack() }
-                )
-            }
+            Dashboard(
+                title = "Arena",
+                items = items,
+                onItemClick = { item ->
+                    navController.navigate(item.destinationRoute)
+                },
+                onBackClick = { navController.popBackStack() }
+            )
         }
     }
 }
