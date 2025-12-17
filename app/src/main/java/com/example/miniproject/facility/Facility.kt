@@ -21,5 +21,7 @@ data class Facility(
     val endTime: String = "",
 
     // 4. CRITICAL: Add the ownerId to create the relationship with the User.
-    val description: String = ""
+    val description: String = "",
+
+    val location: String = ""
 )

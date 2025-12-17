@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -49,8 +50,9 @@ fun Dashboard(
     title: String,
     items: List<DashboardItemData>,
     onItemClick: (DashboardItemData) -> Unit,
-    onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBackClick: (() -> Unit)? = null, // Made optional
+    bottomContent: (@Composable () -> Unit)? = null // Optional slot for bottom content
 ) {
     // Outermost Box with the purple gradient background
     Box(
@@ -69,18 +71,30 @@ fun Dashboard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 140.dp) // Pushed the white card down further
+                .padding(top = 140.dp)
                 .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                 .background(Color.White)
-                .padding(16.dp), // General padding for the content inside the white card
-            verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically), // Increased spacing
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(16.dp)
         ) {
-            items.forEach { item ->
-                DashboardItem(
-                    item = item,
-                    onClick = { onItemClick(item) }
-                )
+            // Box to center the main items in the available space
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    items.forEach { item ->
+                        DashboardItem(
+                            item = item,
+                            onClick = { onItemClick(item) }
+                        )
+                    }
+                }
+            }
+            // Slot for the bottom content, like a logout button
+            if (bottomContent != null) {
+                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+                    bottomContent()
+                }
             }
         }
 
@@ -91,22 +105,24 @@ fun Dashboard(
                     text = title,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp // Larger font size as requested
+                    fontSize = 32.sp
                 )
             },
             navigationIcon = {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
+                // Display the back button only if onBackClick is provided
+                if (onBackClick != null) {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
+                    }
                 }
             },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                 containerColor = Color.Transparent
             ),
-            // This modifier pushes the entire app bar down from the top of the screen
             modifier = Modifier.padding(top = 40.dp)
         )
     }
@@ -133,7 +149,7 @@ fun DashboardItem(
                 contentDescription = null, // Decorative
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxWidth(0.4f) // Image takes up 40% of the width
+                    .fillMaxWidth(0.4f) 
                     .fillMaxHeight()
                     .align(Alignment.CenterStart)
             )
@@ -149,19 +165,23 @@ fun DashboardItem(
                                 item.backgroundColor.copy(alpha = 0.5f),
                                 item.backgroundColor
                             ),
-                            startX = 150f // Start gradient after the image
+                            startX = 150f
                         )
                     )
             ) {
-                Text(
-                    text = item.title,
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                 Column(
                     modifier = Modifier
-                        .align(Alignment.CenterEnd) // Align text to the end (right)
-                        .padding(end = 24.dp) // Add padding from the end
-                )
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 24.dp)
+                        .width(150.dp) // Constrain the width to allow wrapping
+                ) {
+                    Text(
+                        text = item.title,
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

@@ -13,6 +13,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-
 rootProject.name = "MiniProject"
 include(":app")
