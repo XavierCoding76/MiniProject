@@ -14,6 +14,7 @@ import com.example.miniproject.admin.bookingAdmin.SearchBookingByDateScreen
 import com.example.miniproject.admin.bookingAdmin.SearchBookingByFacilityScreen
 import com.example.miniproject.admin.bookingAdmin.SearchBookingByReservationIdScreen
 import com.example.miniproject.admin.bookingAdmin.SearchBookingByUserScreen
+import com.example.miniproject.admin.facilityAdmin.AddFacilityScreen
 import com.example.miniproject.admin.facilityAdmin.AdminFacilityScreen
 import com.example.miniproject.admin.facilityAdmin.ArenaTarumtScreen
 import com.example.miniproject.admin.facilityAdmin.ArenaTarumtSportScreen
@@ -132,6 +133,16 @@ fun AppNavigation(modifier: Modifier = Modifier) {
         composable("report_generation") {
             // TODO: Replace with the actual Report Generation screen
             Text("Report Generation Screen")
+        }
+        composable(
+            route = "add_facility/{buildingType}",
+            arguments = listOf(navArgument("buildingType") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val buildingType = backStackEntry.arguments?.getString("buildingType") ?: "C"
+            AddFacilityScreen(
+                navController = navController,
+                buildingType = buildingType
+            )
         }
     }
 }

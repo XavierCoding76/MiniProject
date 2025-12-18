@@ -1,5 +1,7 @@
 package com.example.miniproject.admin.facilityAdmin
 
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -61,6 +63,9 @@ import androidx.navigation.NavController
 import com.example.miniproject.R
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import androidx.compose.material3.Checkbox
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
 
 private fun formatTime(time: String?): String {
     if (time == null || time.length != 4) return "N/A"
@@ -75,15 +80,15 @@ fun FacilityDetailScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // By keying the state to facilityName, it will reset whenever the facilityName changes.
     var showEditDialog by remember(facilityName) { mutableStateOf(false) }
     var showConfirmDialog by remember(facilityName) { mutableStateOf(false) }
+    var showDeleteDialog by remember(facilityName) { mutableStateOf(false) }
     var editingField by remember(facilityName) { mutableStateOf("") }
     var localChanges by remember(facilityName) { mutableStateOf<Map<String, Any>>(emptyMap()) }
     var isEquipmentView by remember(facilityName) { mutableStateOf(false) }
     var showTimePickerDialog by remember(facilityName) { mutableStateOf(false) }
     var showCapacityDialog by remember(facilityName) { mutableStateOf(false) }
-    var editingTimeField by remember(facilityName) { mutableStateOf("") } // "startTime" or "endTime"
+    var editingTimeField by remember(facilityName) { mutableStateOf("") }
 
 
     fun openEditDialog(field: String) {
@@ -143,6 +148,19 @@ fun FacilityDetailScreen(
         )
     }
 
+    if (showDeleteDialog) {
+        DeleteFacilityDialog(
+            facilityName = localChanges["name"] as? String ?: "",
+            onDismiss = { showDeleteDialog = false },
+            onConfirm = {
+                viewModel.deleteFacility {
+                    navController.popBackStack()
+                }
+                showDeleteDialog = false
+            }
+        )
+    }
+
     LaunchedEffect(facilityName) {
         if (facilityName != null) {
             val decodedName = URLDecoder.decode(facilityName, StandardCharsets.UTF_8.toString())
@@ -152,7 +170,7 @@ fun FacilityDetailScreen(
 
     LaunchedEffect(viewModel.facility) {
         viewModel.facility?.let {
-            if (localChanges.isEmpty()) { // Only set initial data once
+            if (localChanges.isEmpty()) {
                 localChanges = it
             }
         }
@@ -169,7 +187,7 @@ fun FacilityDetailScreen(
 
             if (localChanges.isNotEmpty()) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_background), // Replace with your image
+                    painter = painterResource(id = R.drawable.ic_launcher_background),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -208,13 +226,8 @@ fun FacilityDetailScreen(
                                 IconButton(onClick = { isEquipmentView = true }) {
                                     Icon(Icons.Filled.Build, contentDescription = "Settings")
                                 }
-                                IconButton(onClick = { /* TODO: Add functionality */ }) {
-                                    Icon(Icons.Filled.Add, contentDescription = "Add")
-                                }
-                                if (viewModel.hasSubVenues) {
-                                    IconButton(onClick = { navController.navigate("sub_venues/${viewModel.facilityId}") }) {
-                                        Icon(Icons.Filled.Add, contentDescription = "Add")
-                                    }
+                                IconButton(onClick = { navController.navigate("sub_venues/${viewModel.facilityId}") }) {
+                                    Icon(Icons.Filled.Add, contentDescription = "Sub Venues")
                                 }
                             }
                         }
@@ -270,19 +283,33 @@ fun FacilityDetailScreen(
 
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Button(
                                 onClick = { navController.popBackStack() },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray),
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Text("Go Back")
+                                Text("Go Back", fontSize = 14.sp)
                             }
                             Button(
                                 onClick = { showConfirmDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5ACD))
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5ACD)),
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Text("Modify Venue", color = Color.White)
+                                Text("Modify", fontSize = 14.sp, color = Color.White)
+                            }
+                            androidx.compose.material3.FloatingActionButton(
+                                onClick = { showDeleteDialog = true },
+                                containerColor = Color(0xFFF44336),
+                                modifier = Modifier.height(40.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Delete,
+                                    contentDescription = "Delete",
+                                    tint = Color.White
+                                )
                             }
                         }
                     }
@@ -298,66 +325,693 @@ fun FacilityDetailScreen(
 }
 
 @Composable
+fun DeleteFacilityDialog(
+    facilityName: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("DELETE FACILITY", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFFF44336))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Are you sure you want to delete this facility?",
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    facilityName,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    fontSize = 18.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "This action cannot be undone. All associated equipment and sub-venues will also be deleted.",
+                    textAlign = TextAlign.Center,
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+                    ) {
+                        Text("Cancel")
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336))
+                    ) {
+                        Text("Yes, Delete", color = Color.White)
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
 fun EquipmentScreen(
     viewModel: FacilityDetailViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var localEquipmentList by remember { mutableStateOf(viewModel.equipmentList) }
+    var showAddEquipmentDialog by remember { mutableStateOf(false) }
+    var showEditEquipmentDialog by remember { mutableStateOf(false) }
+    var showConfirmChangesDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var editingEquipment by remember { mutableStateOf<Map<String, Any>?>(null) }
+    var editingEquipmentIndex by remember { mutableStateOf(-1) }
+    var deletingEquipmentIndex by remember { mutableStateOf(-1) }
 
-    Column(
+    // Sync local list with ViewModel's list when it changes
+    LaunchedEffect(viewModel.equipmentList) {
+        localEquipmentList = viewModel.equipmentList
+    }
+
+    // Function to find the next available ID (fills gaps)
+    fun getNextAvailableId(): String {
+        val facilityId = viewModel.facilityId ?: ""
+        val existingIds = localEquipmentList.mapNotNull {
+            val id = it["id"] as? String
+            // Extract the number part after "E"
+            id?.removePrefix("${facilityId}E")?.toIntOrNull()
+        }.toSet()
+
+        // Find the smallest missing number starting from 1
+        var nextNum = 1
+        while (existingIds.contains(nextNum)) {
+            nextNum++
+        }
+
+        return "${facilityId}E${nextNum}"
+    }
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight(0.7f)
             .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
             .background(Color.White)
-            .padding(16.dp)
     ) {
-        Text("Equipment", fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
-        Spacer(modifier = Modifier.height(16.dp))
-        if (localEquipmentList.isEmpty()) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Text("No equipment found.", color = Color.Gray, textAlign = TextAlign.Center)
-            }
-        } else {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(localEquipmentList) { equipment ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(equipment["name"] as? String ?: "", modifier = Modifier.weight(1f))
-                        IconButton(onClick = { /* TODO: Edit equipment name */ }) {
-                            Icon(Icons.Filled.Create, contentDescription = "Edit")
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            Text(
+                "Equipment",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (localEquipmentList.isEmpty()) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text("No equipment found.", color = Color.Gray, textAlign = TextAlign.Center)
+                }
+            } else {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(localEquipmentList.size) { index ->
+                        val equipment = localEquipmentList[index]
+
+                        // Convert price and quantity to strings, handling both String and Number types
+                        val priceStr = when (val p = equipment["price"]) {
+                            is Number -> String.format("%.2f", p.toDouble())
+                            is String -> p
+                            else -> "0.00"
                         }
-                        IconButton(onClick = { localEquipmentList = localEquipmentList - equipment }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
+
+                        val quantityStr = when (val q = equipment["quantity"]) {
+                            is Number -> q.toString()
+                            is String -> q
+                            else -> "0"
+                        }
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(12.dp)
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = equipment["name"] as? String ?: "",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 16.sp
+                                    )
+                                    Text(
+                                        text = "RM $priceStr",
+                                        fontSize = 14.sp,
+                                        color = Color.Gray
+                                    )
+                                    Text(
+                                        text = "Qty: $quantityStr",
+                                        fontSize = 14.sp,
+                                        color = Color.Gray
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    editingEquipment = equipment
+                                    editingEquipmentIndex = index
+                                    showEditEquipmentDialog = true
+                                }) {
+                                    Icon(Icons.Filled.Create, contentDescription = "Edit")
+                                }
+                                IconButton(onClick = {
+                                    deletingEquipmentIndex = index
+                                    showDeleteConfirmDialog = true
+                                }) {
+                                    Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color(0xFFF44336))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = onBack,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+                ) {
+                    Text("Go Back")
+                }
+                Button(
+                    onClick = { showConfirmChangesDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5ACD))
+                ) {
+                    Text("Save", color = Color.White)
+                }
+            }
+        }
+
+        // Floating Action Button
+        androidx.compose.material3.FloatingActionButton(
+            onClick = { showAddEquipmentDialog = true },
+            containerColor = Color(0xFF6A5ACD),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+                .padding(bottom = 72.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = "Add Equipment",
+                tint = Color.White
+            )
+        }
+    }
+
+    // Delete Confirmation Dialog
+    if (showDeleteConfirmDialog && deletingEquipmentIndex >= 0) {
+        val equipmentToDelete = localEquipmentList[deletingEquipmentIndex]
+        Dialog(onDismissRequest = {
+            showDeleteConfirmDialog = false
+            deletingEquipmentIndex = -1
+        }) {
+            Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("DELETE EQUIPMENT", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Are you sure you want to delete this equipment?",
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        equipmentToDelete["name"] as? String ?: "",
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        Button(
+                            onClick = {
+                                showDeleteConfirmDialog = false
+                                deletingEquipmentIndex = -1
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+                        ) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                localEquipmentList = localEquipmentList.toMutableList().apply {
+                                    removeAt(deletingEquipmentIndex)
+                                }
+                                showDeleteConfirmDialog = false
+                                deletingEquipmentIndex = -1
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336))
+                        ) {
+                            Text("Yes", color = Color.White)
                         }
                     }
                 }
             }
         }
-        IconButton(onClick = { localEquipmentList = localEquipmentList + mapOf("name" to "New Equipment") }) {
-            Icon(Icons.Filled.Add, contentDescription = "Add Equipment")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Button(
-                onClick = onBack,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
-            ) {
-                Text("Go Back")
+    }
+
+    // Confirm Changes Dialog
+    if (showConfirmChangesDialog) {
+        ConfirmEquipmentChangesDialog(
+            originalEquipment = viewModel.equipmentList,
+            modifiedEquipment = localEquipmentList,
+            onDismiss = { showConfirmChangesDialog = false },
+            onConfirm = {
+                viewModel.saveEquipmentChanges(localEquipmentList) {
+                    onBack()
+                }
+                showConfirmChangesDialog = false
             }
-            Button(
-                onClick = { viewModel.saveEquipmentChanges(localEquipmentList, onBack) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5ACD))
+        )
+    }
+
+    // Add Equipment Dialog - MODIFIED TO FILL GAPS
+    if (showAddEquipmentDialog) {
+        AddEquipmentDialog(
+            title = "ADD EQUIPMENT",
+            initialName = "",
+            initialPrice = "",
+            initialQuantity = "",
+            onDismiss = { showAddEquipmentDialog = false },
+            onConfirm = { name, price, quantity ->
+                val newEquipmentId = getNextAvailableId()
+
+                localEquipmentList = localEquipmentList + mapOf(
+                    "id" to newEquipmentId,
+                    "name" to name,
+                    "price" to price,
+                    "quantity" to quantity
+                )
+                showAddEquipmentDialog = false
+            }
+        )
+    }
+
+    // Edit Equipment Dialog - FIXED TO PRESERVE ID
+    if (showEditEquipmentDialog && editingEquipment != null) {
+        // Convert Number types to Strings for editing
+        val initialPrice = when (val p = editingEquipment!!["price"]) {
+            is Number -> String.format("%.2f", p.toDouble())
+            is String -> p
+            else -> ""
+        }
+
+        val initialQuantity = when (val q = editingEquipment!!["quantity"]) {
+            is Number -> q.toString()
+            is String -> q
+            else -> ""
+        }
+
+        AddEquipmentDialog(
+            title = "EDIT EQUIPMENT",
+            initialName = editingEquipment!!["name"] as? String ?: "",
+            initialPrice = initialPrice,
+            initialQuantity = initialQuantity,
+            onDismiss = {
+                showEditEquipmentDialog = false
+                editingEquipment = null
+                editingEquipmentIndex = -1
+            },
+            onConfirm = { name, price, quantity ->
+                localEquipmentList = localEquipmentList.toMutableList().apply {
+                    val originalItem = this[editingEquipmentIndex]
+                    this[editingEquipmentIndex] = buildMap {
+                        put("name", name)
+                        put("price", price)
+                        put("quantity", quantity)
+                        // Preserve the original ID if it exists
+                        originalItem["id"]?.let { put("id", it) }
+                    }
+                }
+                showEditEquipmentDialog = false
+                editingEquipment = null
+                editingEquipmentIndex = -1
+            }
+        )
+    }
+}
+@Composable
+fun ConfirmEquipmentChangesDialog(
+    originalEquipment: List<Map<String, Any>>,
+    modifiedEquipment: List<Map<String, Any>>,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val originalIds = originalEquipment.mapNotNull { it["id"] as? String }.toSet()
+    val modifiedIds = modifiedEquipment.mapNotNull { it["id"] as? String }.toSet()
+
+    val addedItems = modifiedEquipment.filter { item ->
+        val id = item["id"] as? String
+        id != null && !originalIds.contains(id)
+    }
+
+    val deletedItems = originalEquipment.filter { item ->
+        val id = item["id"] as? String
+        id != null && !modifiedIds.contains(id)
+    }
+
+    val modifiedItems = modifiedEquipment.filter { modItem ->
+        val id = modItem["id"] as? String
+        if (id != null && originalIds.contains(id)) {
+            val originalItem = originalEquipment.find { it["id"] == id }
+            originalItem != null && (
+                    originalItem["name"] != modItem["name"] ||
+                            originalItem["price"].toString() != modItem["price"].toString() ||
+                            originalItem["quantity"].toString() != modItem["quantity"].toString()
+                    )
+        } else false
+    }
+
+    val hasChanges = addedItems.isNotEmpty() || deletedItems.isNotEmpty() || modifiedItems.isNotEmpty()
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Save", color = Color.White)
+                Text("CONFIRM CHANGES", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (!hasChanges) {
+                    Text("No changes were made.", textAlign = TextAlign.Center)
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.Start,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // Added items
+                        if (addedItems.isNotEmpty()) {
+                            Text(
+                                "Added Equipment:",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF4CAF50)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            addedItems.forEach { item ->
+                                Text(
+                                    text = "  + ${item["name"]} (RM ${item["price"]}, Qty: ${item["quantity"]})",
+                                    fontSize = 14.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        // Modified items
+                        if (modifiedItems.isNotEmpty()) {
+                            Text(
+                                "Modified Equipment:",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2196F3)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            modifiedItems.forEach { modItem ->
+                                val id = modItem["id"] as? String
+                                val originalItem = originalEquipment.find { it["id"] == id }
+                                if (originalItem != null) {
+                                    Text(
+                                        text = "  • ${modItem["name"]}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    if (originalItem["name"] != modItem["name"]) {
+                                        Text(
+                                            text = "    Name: ${originalItem["name"]} → ${modItem["name"]}",
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                    if (originalItem["price"].toString() != modItem["price"].toString()) {
+                                        Text(
+                                            text = "    Price: RM ${originalItem["price"]} → RM ${modItem["price"]}",
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                    if (originalItem["quantity"].toString() != modItem["quantity"].toString()) {
+                                        Text(
+                                            text = "    Qty: ${originalItem["quantity"]} → ${modItem["quantity"]}",
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        // Deleted items
+                        if (deletedItems.isNotEmpty()) {
+                            Text(
+                                "Deleted Equipment:",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF44336)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            deletedItems.forEach { item ->
+                                Text(
+                                    text = "  - ${item["name"]} (RM ${item["price"]}, Qty: ${item["quantity"]})",
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+                    ) {
+                        Text("Cancel")
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5ACD)),
+                        enabled = hasChanges
+                    ) {
+                        Text("Confirm", color = Color.White)
+                    }
+                }
             }
         }
     }
 }
+@Composable
+fun AddEquipmentDialog(
+    title: String,
+    initialName: String,
+    initialPrice: String,
+    initialQuantity: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String) -> Unit
+) {
+    var equipmentName by remember { mutableStateOf(initialName) }
 
+    // Store raw digits only - internal state
+    var priceDigits by remember {
+        mutableStateOf(
+            if (initialPrice.isNotEmpty()) {
+                val priceValue = initialPrice.toDoubleOrNull() ?: 0.0
+                (priceValue * 100).toLong().toString()
+            } else "0"
+        )
+    }
+
+    var quantity by remember { mutableStateOf(initialQuantity) }
+
+    // Format for display
+    fun formatPriceDisplay(digits: String): String {
+        val value = digits.toLongOrNull() ?: 0
+        return String.format("%.2f", value / 100.0)
+    }
+
+    // Visual transformation for price
+    val priceVisualTransformation = androidx.compose.ui.text.input.VisualTransformation { text ->
+        val digits = text.text
+        val value = digits.toLongOrNull() ?: 0
+        val formatted = String.format("%.2f", value / 100.0)
+
+        TransformedText(
+            text = androidx.compose.ui.text.AnnotatedString(formatted),
+            offsetMapping = object : OffsetMapping {
+                override fun originalToTransformed(offset: Int): Int = formatted.length
+                override fun transformedToOriginal(offset: Int): Int = digits.length
+            }
+        )
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.padding(0.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.Gray
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Equipment Name Field
+                OutlinedTextField(
+                    value = equipmentName,
+                    onValueChange = { equipmentName = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Name") },
+                    placeholder = { Text("Badminton Racket") },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Create,
+                            contentDescription = "Edit",
+                            tint = Color.Gray
+                        )
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Price Field with RM prefix - Stack style input with visual transformation
+                OutlinedTextField(
+                    value = priceDigits,
+                    onValueChange = { newValue ->
+                        // Only accept digits
+                        val filtered = newValue.filter { it.isDigit() }
+
+                        when {
+                            // Deleting - remove last digit
+                            filtered.length < priceDigits.length -> {
+                                priceDigits = if (priceDigits.length > 1) {
+                                    priceDigits.dropLast(1)
+                                } else {
+                                    "0"
+                                }
+                            }
+                            // Adding - append new digit to the end
+                            filtered.length > priceDigits.length -> {
+                                val newDigit = filtered.last()
+                                val newDigits = if (priceDigits == "0") {
+                                    newDigit.toString()
+                                } else {
+                                    priceDigits + newDigit
+                                }
+                                // Limit to 6 digits (max 9999.99)
+                                if (newDigits.length <= 6) {
+                                    priceDigits = newDigits
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Price") },
+                    placeholder = { Text("0.00") },
+                    prefix = { Text("RM ") },
+                    visualTransformation = priceVisualTransformation,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Create,
+                            contentDescription = "Edit",
+                            tint = Color.Gray
+                        )
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Quantity Field (Numbers only)
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { newValue ->
+                        if (newValue.all { it.isDigit() } && newValue.length <= 3) {
+                            quantity = newValue
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Quantity") },
+                    placeholder = { Text("50") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Create,
+                            contentDescription = "Edit",
+                            tint = Color.Gray
+                        )
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        val finalPrice = formatPriceDisplay(priceDigits)
+                        if (equipmentName.isNotBlank() && finalPrice.isNotBlank() && quantity.isNotBlank()) {
+                            onConfirm(equipmentName, finalPrice, quantity)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5ACD)),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    enabled = equipmentName.isNotBlank() && priceDigits.isNotBlank() && quantity.isNotBlank()
+                ) {
+                    Text("Confirm", color = Color.White)
+                }
+            }
+        }
+    }
+}
 @Composable
 fun TimePickerDialog(
     initialTime: String,
@@ -383,7 +1037,7 @@ fun TimePickerDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
-                    modifier = Modifier.height(150.dp), // Constrain height for the pickers
+                    modifier = Modifier.height(150.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     LazyColumn(
