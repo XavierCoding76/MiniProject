@@ -48,7 +48,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.3"
+        kotlinCompilerExtensionVersion = "1.5.14"  // For Kotlin 1.9.24
     }
 
     packaging {
@@ -63,6 +63,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+    implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("com.google.android.material:material:1.11.0")
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
@@ -76,6 +78,8 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    implementation("androidx.compose.material:material-icons-extended:1.5.4")
+
 
     // Firebase
     implementation(platform(libs.firebase.bom))
