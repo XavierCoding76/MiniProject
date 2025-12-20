@@ -454,9 +454,12 @@ private fun ReservationDetailCard(
 
                     Surface(
                         color = when (reservation.bookedHours) {
-                            1 -> Color(0xFF2196F3)
-                            2 -> Color(0xFF4CAF50)
-                            3 -> Color(0xFFFF9800)
+                            0.5 -> Color(0xFF03A9F4)  // Light Blue
+                            1.0 -> Color(0xFF2196F3)  // Blue
+                            1.5 -> Color(0xFF00BCD4)  // Cyan
+                            2.0 -> Color(0xFF4CAF50)  // Green
+                            2.5 -> Color(0xFF8BC34A)  // Light Green
+                            3.0 -> Color(0xFFFF9800)  // Orange
                             else -> Color(0xFF6A5ACD)
                         },
                         shape = RoundedCornerShape(16.dp)

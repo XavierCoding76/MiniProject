@@ -85,7 +85,19 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
+    dependencies {
+        // Existing dependencies...
 
+        // Firebase Functions
+        implementation("com.google.firebase:firebase-functions-ktx:20.4.0")
+
+        // Make sure you also have these Firebase dependencies
+        implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+
+
+        // Coroutines support for Firebase
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    }
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

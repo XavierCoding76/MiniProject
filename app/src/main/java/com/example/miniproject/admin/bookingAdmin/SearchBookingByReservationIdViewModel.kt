@@ -92,7 +92,7 @@ class SearchBookingByReservationIdViewModel(application: Application) : AndroidV
                     facilityID = fullFacilityId,
                     userID = reservationDoc.getString("userID") ?: "",
                     bookedTime = reservationDoc.getTimestamp("bookedTime"),
-                    bookedHours = reservationDoc.getLong("bookedHours")?.toInt() ?: 1
+                    bookedHours = reservationDoc.getDouble("bookedHours") ?: 1.0
                 )
 
                 // Get facility name

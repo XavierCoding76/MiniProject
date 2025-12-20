@@ -76,7 +76,7 @@ class AddEditReservationViewModel : ViewModel() {
     private val _selectedTime = MutableStateFlow<Pair<Int, Int>?>(null)
     val selectedTime = _selectedTime.asStateFlow()
 
-    private val _bookedHours = MutableStateFlow(1)
+    private val _bookedHours = MutableStateFlow(1.0)
     val bookedHours = _bookedHours.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
@@ -222,7 +222,7 @@ class AddEditReservationViewModel : ViewModel() {
         selectedTime: Pair<Int, Int>?,
         facilityDetails: FacilityDetails?,
         selectedDate: Long?,
-        bookedHours: Int
+        bookedHours: Double  // Changed from Int to Double
     ) {
         if (selectedTime == null || facilityDetails == null || selectedDate == null) {
             _timeValidationError.value = null
@@ -251,7 +251,7 @@ class AddEditReservationViewModel : ViewModel() {
             return
         }
 
-        val reservationEndMinutes = selectedTotalMinutes + (bookedHours * 60)
+        val reservationEndMinutes = selectedTotalMinutes + (bookedHours * 60).toInt()  // Convert to Int for calculation
         if (reservationEndMinutes > endTotalMinutes) {
             _timeValidationError.value = "Reservation exceeds facility closing time (${formatTime(facilityEndTime.first, facilityEndTime.second)})"
             return
@@ -394,7 +394,7 @@ class AddEditReservationViewModel : ViewModel() {
         println("🕐 Time set to: ${formatTime(hour, minute)}")
     }
 
-    fun setBookedHours(hours: Int) {
+    fun setBookedHours(hours: Double) {
         _bookedHours.value = hours
         validateReservationTime(_selectedTime.value, _selectedFacilityDetails.value, _selectedDate.value, hours)
     }
@@ -423,7 +423,7 @@ class AddEditReservationViewModel : ViewModel() {
 
     fun getReservationEndTime(): String {
         return _selectedTime.value?.let { (hour, minute) ->
-            val totalMinutes = hour * 60 + minute + (_bookedHours.value * 60)
+            val totalMinutes = hour * 60 + minute + (_bookedHours.value * 60).toInt()
             val endHour = (totalMinutes / 60) % 24
             val endMinute = totalMinutes % 60
             formatTime(endHour, endMinute)
@@ -496,7 +496,7 @@ class AddEditReservationViewModel : ViewModel() {
                     "userID" to _displayId.value,
                     "facilityID" to _selectedFacility.value!!.id,
                     "bookedTime" to bookedTime,
-                    "bookedHours" to _bookedHours.value
+                    "bookedHours" to _bookedHours.value  // Already a Double
                 )
 
                 db.collection("reservation")
@@ -555,7 +555,7 @@ class AddEditReservationViewModel : ViewModel() {
                         )
                     }
 
-                    _bookedHours.value = doc.getLong("bookedHours")?.toInt() ?: 1
+                    _bookedHours.value = doc.getDouble("bookedHours") ?: 1.0
                     println("✅ Loaded reservation: $reservationId")
                 }
             } catch (e: Exception) {
@@ -799,12 +799,24 @@ fun AddEditReservationScreen(
                                             facility.id
                                         }
                                         val location = when {
-                                            parentId.startsWith("S", ignoreCase = true) -> "Sports Complex"
+                                            parentId.startsWith(
+                                                "S",
+                                                ignoreCase = true
+                                            ) -> "Sports Complex"
+
                                             parentId.startsWith("CC", ignoreCase = true) -> "CITC"
                                             parentId.startsWith("L", ignoreCase = true) -> "Library"
                                             parentId.startsWith("AL", ignoreCase = true) ||
-                                                    parentId.startsWith("AS", ignoreCase = true) -> "Arena TARUMT"
-                                            parentId.startsWith("C", ignoreCase = true) -> "Clubhouse"
+                                                    parentId.startsWith(
+                                                        "AS",
+                                                        ignoreCase = true
+                                                    ) -> "Arena TARUMT"
+
+                                            parentId.startsWith(
+                                                "C",
+                                                ignoreCase = true
+                                            ) -> "Clubhouse"
+
                                             else -> "Unknown Location"
                                         }
                                         Text(
@@ -826,12 +838,32 @@ fun AddEditReservationScreen(
                 if (selectedFacilityDetails != null) {
                     Column(modifier = Modifier.padding(start = 16.dp, top = 8.dp)) {
                         val location = when {
-                            selectedFacilityDetails!!.id.startsWith("S", ignoreCase = true) -> "Sports Complex"
-                            selectedFacilityDetails!!.id.startsWith("CC", ignoreCase = true) -> "CITC"
-                            selectedFacilityDetails!!.id.startsWith("L", ignoreCase = true) -> "Library"
+                            selectedFacilityDetails!!.id.startsWith(
+                                "S",
+                                ignoreCase = true
+                            ) -> "Sports Complex"
+
+                            selectedFacilityDetails!!.id.startsWith(
+                                "CC",
+                                ignoreCase = true
+                            ) -> "CITC"
+
+                            selectedFacilityDetails!!.id.startsWith(
+                                "L",
+                                ignoreCase = true
+                            ) -> "Library"
+
                             selectedFacilityDetails!!.id.startsWith("AL", ignoreCase = true) ||
-                                    selectedFacilityDetails!!.id.startsWith("AS", ignoreCase = true) -> "Arena TARUMT"
-                            selectedFacilityDetails!!.id.startsWith("C", ignoreCase = true) -> "Clubhouse"
+                                    selectedFacilityDetails!!.id.startsWith(
+                                        "AS",
+                                        ignoreCase = true
+                                    ) -> "Arena TARUMT"
+
+                            selectedFacilityDetails!!.id.startsWith(
+                                "C",
+                                ignoreCase = true
+                            ) -> "Clubhouse"
+
                             else -> "Unknown Location"
                         }
                         Text(
@@ -1003,82 +1035,56 @@ fun AddEditReservationScreen(
                 color = Color(0xFF483D8B)
             )
             Spacer(modifier = Modifier.height(8.dp))
+
+// First row: 0.5, 1, 1.5
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                listOf(1, 2, 3).forEach { hours ->
+                listOf(0.5, 1.0, 1.5).forEach { hours ->
                     FilterChip(
                         selected = bookedHours == hours,
                         onClick = { viewModel.setBookedHours(hours) },
-                        label = { Text("$hours Hour${if (hours > 1) "s" else ""}") },
+                        label = {
+                            Text(
+                                if (hours == 0.5 || hours == 1.5 || hours == 2.5) {
+                                    "${
+                                        hours.toString().replace(".0", "")
+                                    } Hour${if (hours > 1) "s" else ""}"
+                                } else {
+                                    "${hours.toInt()} Hour${if (hours > 1) "s" else ""}"
+                                }
+                            )
+                        },
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Button(
-                onClick = { viewModel.saveReservation() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                enabled = !isLoading && isSaveEnabled.value,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF483D8B),
-                    disabledContainerColor = Color(0xFF9E9E9E)
-                ),
-                shape = RoundedCornerShape(12.dp)
+// Second row: 2, 2.5, 3
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(Icons.Filled.Save, contentDescription = "Save")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        if (isEditMode) "Update Reservation" else "Create Reservation",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                listOf(2.0, 2.5, 3.0).forEach { hours ->
+                    FilterChip(
+                        selected = bookedHours == hours,
+                        onClick = { viewModel.setBookedHours(hours) },
+                        label = {
+                            Text(
+                                if (hours == 0.5 || hours == 1.5 || hours == 2.5) {
+                                    "${hours} Hours"
+                                } else {
+                                    "${hours.toInt()} Hours"
+                                }
+                            )
+                        },
+                        modifier = Modifier.weight(1f)
                     )
                 }
-            }
-
-            if (!isSaveEnabled.value && !isLoading) {
-                Text(
-                    "Please fill all required fields with valid data",
-                    color = Color(0xFFF44336),
-                    fontSize = 12.sp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
             }
         }
-
-        CenterAlignedTopAppBar(
-            title = {
-                Text(
-                    if (isEditMode) "Edit Reservation" else "Add Reservation",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 28.sp
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
-                }
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = Color.Transparent
-            ),
-            modifier = Modifier.padding(top = 40.dp)
-        )
     }
 }

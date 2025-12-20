@@ -154,7 +154,7 @@ class SearchBookingByFacilityViewModel(application: Application) : AndroidViewMo
                                 facilityID = fullFacilityId,
                                 userID = doc.getString("userID") ?: "",
                                 bookedTime = doc.getTimestamp("bookedTime"),
-                                bookedHours = doc.getLong("bookedHours")?.toInt() ?: 1
+                                bookedHours = doc.getDouble("bookedHours") ?: 1.0
                             )
 
                             val facilityName = _facilities.value

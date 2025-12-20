@@ -150,7 +150,7 @@ class SearchBookingByDateViewModel : ViewModel() {
                             userID = doc.getString("userID") ?: "",
                             facilityID = doc.getString("facilityID") ?: "",
                             bookedTime = doc.getTimestamp("bookedTime"),
-                            bookedHours = doc.getLong("bookedHours")?.toInt() ?: 1
+                            bookedHours = doc.getDouble("bookedHours") ?: 1.0
                         )
                     } catch (e: Exception) {
                         println("❌ Error parsing reservation: ${e.message}")

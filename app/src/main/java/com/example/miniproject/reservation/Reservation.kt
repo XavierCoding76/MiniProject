@@ -10,5 +10,5 @@ data class Reservation(
     val facilityID: String = "",
     // This will store the User's displayId for UI purposes.
     val userID: String = "",
-    val bookedHours: Int = 0
+    val bookedHours: Double = 1.0
 )
