@@ -1105,16 +1105,8 @@ fun CapacityModificationDialog(
     onDismiss: () -> Unit,
     onSave: (Int, Int) -> Unit
 ) {
-    var isSame by remember { mutableStateOf(initialMin == initialMax) }
     var minNumText by remember { mutableStateOf(initialMin.toString()) }
     var maxNumText by remember { mutableStateOf(initialMax.toString()) }
-    var singleValueText by remember { mutableStateOf(if (initialMin == initialMax) initialMin.toString() else "") }
-
-    fun onValueChange(currentValue: String, newValue: String, onTextChanged: (String) -> Unit) {
-        if (newValue.length <= 2 && newValue.all { it.isDigit() }) {
-            onTextChanged(newValue)
-        }
-    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
@@ -1125,69 +1117,33 @@ fun CapacityModificationDialog(
                 Text("EDIT CAPACITY", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { isSame = !isSame }
-                ) {
-                    Checkbox(checked = isSame, onCheckedChange = { isSame = it })
-                    Text("Min and Max are the same")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = minNumText,
+                    onValueChange = { newValue ->
+                        if (newValue.isEmpty() || (newValue.length <= 3 && newValue.all { it.isDigit() })) {
+                            minNumText = newValue
+                        }
+                    },
+                    label = { Text("Minimum Capacity") },
+                    placeholder = { Text("e.g., 5") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                if (isSame) {
-                    OutlinedTextField(
-                        value = singleValueText,
-                        onValueChange = {
-                            onValueChange(singleValueText, it) { updatedValue ->
-                                singleValueText = updatedValue
-                            }
-                        },
-                        label = { Text("Capacity") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = minNumText,
-                            onValueChange = {
-                                onValueChange(minNumText, it) { updatedValue ->
-                                    minNumText = updatedValue
-                                    val newMin = updatedValue.toIntOrNull() ?: 0
-                                    val maxNum = maxNumText.toIntOrNull() ?: newMin
-                                    if (newMin > maxNum) {
-                                        maxNumText = newMin.toString()
-                                    }
-                                }
-                            },
-                            label = { Text("Min") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
+                Spacer(modifier = Modifier.height(12.dp))
 
-                        Text("to")
-
-                        OutlinedTextField(
-                            value = maxNumText,
-                            onValueChange = {
-                                onValueChange(maxNumText, it) { updatedValue ->
-                                    maxNumText = updatedValue
-                                    val newMax = updatedValue.toIntOrNull() ?: 0
-                                    val minNum = minNumText.toIntOrNull() ?: 0
-                                    if (newMax < minNum) {
-                                        minNumText = newMax.toString()
-                                    }
-                                }
-                            },
-                            label = { Text("Max") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
+                OutlinedTextField(
+                    value = maxNumText,
+                    onValueChange = { newValue ->
+                        if (newValue.isEmpty() || (newValue.length <= 3 && newValue.all { it.isDigit() })) {
+                            maxNumText = newValue
+                        }
+                    },
+                    label = { Text("Maximum Capacity") },
+                    placeholder = { Text("e.g., 20") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
                 Row(
@@ -1199,14 +1155,12 @@ fun CapacityModificationDialog(
                     }
                     Button(
                         onClick = {
-                            if (isSame) {
-                                val singleValue = singleValueText.toIntOrNull() ?: 0
-                                onSave(singleValue, singleValue)
-                            } else {
-                                onSave(minNumText.toIntOrNull() ?: 0, maxNumText.toIntOrNull() ?: 0)
-                            }
+                            val minNum = minNumText.toIntOrNull() ?: 0
+                            val maxNum = maxNumText.toIntOrNull() ?: 0
+                            onSave(minNum, maxNum)
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5ACD))
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5ACD)),
+                        enabled = minNumText.isNotEmpty() && maxNumText.isNotEmpty()
                     ) {
                         Text("Save", color = Color.White)
                     }

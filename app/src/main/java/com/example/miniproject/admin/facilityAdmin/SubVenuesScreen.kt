@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -182,6 +183,11 @@ fun SubVenuesScreen(
                                     },
                                     onChangeRemoved = { subVenueId ->
                                         pendingChanges = pendingChanges.filter { it.subVenueId != subVenueId }
+                                    },
+                                    onDeleted = {
+                                        if (mainFacilityId != null) {
+                                            viewModel.fetchSubVenues(mainFacilityId)
+                                        }
                                     }
                                 )
                             }
@@ -481,9 +487,11 @@ fun ExpandableSubVenueCard(
     subVenue: FacilityInd,
     viewModel: SubVenuesViewModel = viewModel(),
     onChangeAdded: (CapacityChange) -> Unit = {},
-    onChangeRemoved: (String) -> Unit = {}
+    onChangeRemoved: (String) -> Unit = {},
+    onDeleted: () -> Unit = {}
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val rotationAngle by animateFloatAsState(targetValue = if (expanded) 180f else 0f)
 
     val originalMinNum = subVenue.customMinNum ?: 0
@@ -603,6 +611,13 @@ fun ExpandableSubVenueCard(
                             fontWeight = FontWeight.Medium
                         )
                     }
+                }
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color(0xFFFF6B6B)
+                    )
                 }
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
@@ -730,35 +745,46 @@ fun ExpandableSubVenueCard(
                             }
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text("Conditional Close", fontWeight = FontWeight.Bold)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = true, onClick = { /*TODO*/ })
-                        Text("All day")
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = false, onClick = { /*TODO*/ })
-                        Text("Partial timeslot")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = "",
-                        onValueChange = {},
-                        label = { Text("Date") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = "",
-                        onValueChange = {},
-                        label = { Text("Remarks") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+        }
+
+        // Delete Confirmation Dialog
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = {
+                    Text("Delete Sub-Venue", fontWeight = FontWeight.Bold)
+                },
+                text = {
+                    Text("Are you sure you want to delete \"${subVenue.name ?: "Unnamed"}\"? This action cannot be undone.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteSubVenue(
+                                facilityIndId = subVenue.id,
+                                onSuccess = {
+                                    showDeleteDialog = false
+                                    onDeleted()
+                                },
+                                onError = { error ->
+                                    println("Error deleting sub-venue: $error")
+                                    showDeleteDialog = false
+                                }
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B6B))
+                    ) {
+                        Text("Delete", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }

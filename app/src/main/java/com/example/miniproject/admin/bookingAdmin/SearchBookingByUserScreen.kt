@@ -461,6 +461,7 @@ private fun ReservationCard(
 
     var showPaymentDialog by remember { mutableStateOf(false) }
     var paymentData by remember { mutableStateOf<Pair<Payment, List<PaymentDetail>>?>(null) }
+    var hasPayment by remember { mutableStateOf(false) }
 
     LaunchedEffect(reservation.id) {
         FirebaseFirestore.getInstance()
@@ -469,6 +470,7 @@ private fun ReservationCard(
             .get()
             .addOnSuccessListener { paymentSnapshot ->
                 if (!paymentSnapshot.isEmpty) {
+                    hasPayment = true
                     val payment = paymentSnapshot.documents.first().toObject(Payment::class.java)
                     payment?.let { p ->
                         FirebaseFirestore.getInstance()
@@ -482,9 +484,14 @@ private fun ReservationCard(
                                 paymentData = Pair(p, details)
                             }
                     }
+                } else {
+                    hasPayment = false
                 }
             }
     }
+
+    val isDeletable = !hasExpired && !hasPayment
+    val isEditable = !hasExpired
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -628,7 +635,8 @@ private fun ReservationCard(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFF5252)
-                        )
+                        ),
+                        enabled = isDeletable
                     ) {
                         Icon(
                             Icons.Filled.Delete,
@@ -637,6 +645,34 @@ private fun ReservationCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Delete", fontSize = 14.sp, color = Color.White)
+                    }
+                }
+
+                if (hasPayment) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFFE3F2FD),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Lock,
+                                contentDescription = "Protected",
+                                tint = Color(0xFF1976D2),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "This reservation has payment and cannot be deleted",
+                                fontSize = 13.sp,
+                                color = Color(0xFF1976D2)
+                            )
+                        }
                     }
                 }
             } else {
@@ -702,7 +738,6 @@ private fun SimplifiedPaymentReceiptDialog(
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // Payment Header
                 Surface(
                     color = Color(0xFFF5F5F5),
                     shape = RoundedCornerShape(8.dp),
@@ -719,7 +754,6 @@ private fun SimplifiedPaymentReceiptDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Total Amount (Highlighted)
                 Surface(
                     color = Color(0xFF4CAF50).copy(alpha = 0.1f),
                     shape = RoundedCornerShape(12.dp),
@@ -764,7 +798,6 @@ private fun SimplifiedPaymentReceiptDialog(
         }
     )
 }
-
 
 @Composable
 private fun ReservationInfoRow(

@@ -429,7 +429,6 @@ class AddEditReservationViewModel : ViewModel() {
         return String.format("%02d:%02d", hour, minute)
     }
 
-    // ✅ FIXED: Load facilities from all parent facilities and their subcollections
     fun loadFacilities() {
         viewModelScope.launch {
             try {
@@ -442,14 +441,13 @@ class AddEditReservationViewModel : ViewModel() {
 
                     Facility(
                         id = id,
-                        name = "$name ($id)"  // Display format: "Court 1 (S1_1)"
+                        name = "$name ($id)"
                     )
                 }
 
                 _facilities.value = facilityList.sortedBy { it.name }
                 println("✅ Loaded ${facilityList.size} facilities from facilityind")
 
-                // Debug: Print all loaded facilities
                 facilityList.forEach { facility ->
                     println("   - ${facility.id}: ${facility.name}")
                 }
@@ -460,8 +458,6 @@ class AddEditReservationViewModel : ViewModel() {
             }
         }
     }
-
-
 
     private suspend fun loadParentFacilityDetails(facilityId: String): FacilityDetails? {
         return try {
@@ -475,11 +471,14 @@ class AddEditReservationViewModel : ViewModel() {
                     .await()
 
                 if (facilityDoc.exists()) {
+                    val startTime = facilityDoc.getString("startTime") ?: "0000"
+                    val endTime = facilityDoc.getString("endTime") ?: "2359"
+
                     val details = FacilityDetails(
                         id = facilityDoc.id,
                         name = facilityDoc.getString("name") ?: facilityDoc.id,
-                        startTime = facilityDoc.getString("startTime") ?: "0900",
-                        endTime = facilityDoc.getString("endTime") ?: "1700"
+                        startTime = startTime,
+                        endTime = endTime
                     )
                     println("✅ Loaded facility details: ${details.name}, hours: ${details.startTime}-${details.endTime}")
                     details
@@ -493,23 +492,28 @@ class AddEditReservationViewModel : ViewModel() {
             }
         } catch (e: Exception) {
             println("❌ Error loading parent facility details: ${e.message}")
+            e.printStackTrace()
             null
         }
     }
 
     private fun extractParentFacilityId(facilityIndId: String): String {
-        // For IDs like "S1_1", "AL_2", "CC_1", "L1_3"
-        // Extract the parent facility ID
+        // Handle different facility ID patterns:
+        // - "S1_1" -> "S1" (Sports facility 1, court 1)
+        // - "AL_2" -> "AL" (Arena/Lecture hall 2)
+        // - "CC_1" -> "CC" (Computer center 1)
+        // - "L1_3" -> "L1" (Library 1, room 3)
 
         return when {
-            // If it contains underscore
-            "_" in facilityIndId -> {
-                val prefix = facilityIndId.substringBefore("_")
-                // Remove any trailing numbers from prefix
-                // "S1" -> "S", "AL" -> "AL", "CC" -> "CC", "L1" -> "L"
-                prefix.replace(Regex("\\d+$"), "")
+            facilityIndId.contains("_") -> {
+                // Extract everything before underscore as parent ID
+                // "S1_1" -> "S1", "AL_2" -> "AL", "CC_1" -> "CC"
+                facilityIndId.substringBefore("_")
             }
-            else -> facilityIndId
+            else -> {
+                println("⚠️ Unexpected facility ID format (no underscore): $facilityIndId")
+                facilityIndId
+            }
         }
     }
 
@@ -590,6 +594,18 @@ class AddEditReservationViewModel : ViewModel() {
             val endMinute = totalMinutes % 60
             formatTime(endHour, endMinute)
         } ?: ""
+    }
+
+    fun getOperatingHoursMessage(): String {
+        return _selectedFacilityDetails.value?.let { details ->
+            val start = parseTimeString(details.startTime)
+            val end = parseTimeString(details.endTime)
+            if (start != null && end != null) {
+                "Operating hours: ${formatTime(start.first, start.second)} - ${formatTime(end.first, end.second)}"
+            } else {
+                "Operating hours not available"
+            }
+        } ?: "Please select a facility first"
     }
 
     fun clearError() {
@@ -734,4 +750,3 @@ class AddEditReservationViewModel : ViewModel() {
         }
     }
 }
-

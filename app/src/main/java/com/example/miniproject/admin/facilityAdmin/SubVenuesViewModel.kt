@@ -161,4 +161,27 @@ class SubVenuesViewModel : ViewModel() {
         // Set both to 0 when clearing
         updateCustomCapacity(facilityIndId, 0, 0, onSuccess, onError)
     }
+
+    fun deleteSubVenue(
+        facilityIndId: String,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                val success = facilityIndRepository.deleteFacilityInd(facilityIndId)
+
+                if (success) {
+                    Log.d("SubVenuesViewModel", "Sub-venue deleted successfully: $facilityIndId")
+                    onSuccess()
+                } else {
+                    Log.e("SubVenuesViewModel", "Failed to delete sub-venue: $facilityIndId")
+                    onError("Failed to delete sub-venue")
+                }
+            } catch (e: Exception) {
+                Log.e("SubVenuesViewModel", "Error deleting sub-venue", e)
+                onError(e.message ?: "Unknown error")
+            }
+        }
+    }
 }

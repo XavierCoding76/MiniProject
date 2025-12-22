@@ -152,6 +152,8 @@ private fun DatePickerCard(
     viewModel: SearchBookingByDateViewModel,
     context: android.content.Context
 ) {
+    val searchText by viewModel.searchText.collectAsState()
+
     Card(
         modifier = Modifier
             .fillMaxWidth(),
@@ -207,7 +209,7 @@ private fun DatePickerCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (viewModel.searchText.value.isNotEmpty()) {
+            if (searchText.isNotEmpty()) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = Color(0xFF483D8B).copy(alpha = 0.1f),
@@ -225,7 +227,7 @@ private fun DatePickerCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Selected: ${viewModel.searchText.value}",
+                            "Selected: $searchText",
                             fontSize = 15.sp,
                             color = Color(0xFF483D8B),
                             fontWeight = FontWeight.Medium
@@ -359,7 +361,9 @@ private fun ReservationCard(
 
     var showPaymentDialog by remember { mutableStateOf(false) }
     var paymentData by remember { mutableStateOf<Pair<Payment, List<PaymentDetail>>?>(null) }
+    var hasPayment by remember { mutableStateOf(false) }
 
+    // Check if reservation has payment
     LaunchedEffect(reservation.id) {
         FirebaseFirestore.getInstance()
             .collection("payment")
@@ -367,6 +371,7 @@ private fun ReservationCard(
             .get()
             .addOnSuccessListener { paymentSnapshot ->
                 if (!paymentSnapshot.isEmpty) {
+                    hasPayment = true
                     val payment = paymentSnapshot.documents.first().toObject(Payment::class.java)
                     payment?.let { p ->
                         FirebaseFirestore.getInstance()
@@ -380,9 +385,15 @@ private fun ReservationCard(
                                 paymentData = Pair(p, details)
                             }
                     }
+                } else {
+                    hasPayment = false
                 }
             }
     }
+
+    // Check if reservation is deletable (not expired AND no payment)
+    val isDeletable = !hasExpired && !hasPayment
+    val isEditable = !hasExpired
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -497,12 +508,14 @@ private fun ReservationCard(
             )
 
             if (!hasExpired) {
+                // Show action buttons for future reservations
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Edit button - always available for future reservations
                     OutlinedButton(
                         onClick = onEditClick,
                         modifier = Modifier.weight(1f),
@@ -520,13 +533,15 @@ private fun ReservationCard(
                         Text("Edit", fontSize = 14.sp)
                     }
 
+                    // Delete button - only available if no payment
                     Button(
                         onClick = onDeleteClick,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFF5252)
-                        )
+                        ),
+                        enabled = isDeletable
                     ) {
                         Icon(
                             Icons.Filled.Delete,
@@ -537,7 +552,37 @@ private fun ReservationCard(
                         Text("Delete", fontSize = 14.sp, color = Color.White)
                     }
                 }
+
+                // Show info message if delete is disabled due to payment
+                if (hasPayment) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFFE3F2FD),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Lock,
+                                contentDescription = "Protected",
+                                tint = Color(0xFF1976D2),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "This reservation has payment and cannot be deleted",
+                                fontSize = 13.sp,
+                                color = Color(0xFF1976D2)
+                            )
+                        }
+                    }
+                }
             } else {
+                // Show archived message for expired reservations
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Surface(
@@ -662,7 +707,6 @@ private fun SimplifiedPaymentReceiptDialog(
         }
     )
 }
-
 
 @Composable
 private fun ReservationInfoRow(

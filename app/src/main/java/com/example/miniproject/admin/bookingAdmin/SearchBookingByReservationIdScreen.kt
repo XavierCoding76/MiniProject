@@ -403,9 +403,10 @@ private fun ReservationDetailCard(
     val reservationTime = reservation.bookedTime?.toDate()?.time ?: 0L
     val hasExpired = currentTime > reservationTime
 
-    // ✅ SIMPLIFIED PAYMENT FUNCTIONALITY - Only fetch payment (no details)
+    // ✅ Check for payment existence
     var showPaymentDialog by remember { mutableStateOf(false) }
     var paymentData by remember { mutableStateOf<Payment?>(null) }
+    var hasPayment by remember { mutableStateOf(false) }
 
     LaunchedEffect(reservation.id) {
         FirebaseFirestore.getInstance()
@@ -414,11 +415,17 @@ private fun ReservationDetailCard(
             .get()
             .addOnSuccessListener { paymentSnapshot ->
                 if (!paymentSnapshot.isEmpty) {
+                    hasPayment = true
                     val payment = paymentSnapshot.documents.first().toObject(Payment::class.java)
                     paymentData = payment
+                } else {
+                    hasPayment = false
                 }
             }
     }
+
+    // ✅ Calculate if deletable
+    val isDeletable = !hasExpired && !hasPayment
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -565,13 +572,15 @@ private fun ReservationDetailCard(
                         Text("Edit", fontSize = 14.sp)
                     }
 
+                    // ✅ Delete button now respects payment status
                     Button(
                         onClick = onDeleteClick,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFF5252)
-                        )
+                        ),
+                        enabled = isDeletable
                     ) {
                         Icon(
                             Icons.Filled.Delete,
@@ -580,6 +589,35 @@ private fun ReservationDetailCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Delete", fontSize = 14.sp, color = Color.White)
+                    }
+                }
+
+                // ✅ Show payment protection notice
+                if (hasPayment) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFFE3F2FD),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Lock,
+                                contentDescription = "Protected",
+                                tint = Color(0xFF1976D2),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "This reservation has payment and cannot be deleted",
+                                fontSize = 13.sp,
+                                color = Color(0xFF1976D2)
+                            )
+                        }
                     }
                 }
             } else {
@@ -602,7 +640,7 @@ private fun ReservationDetailCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "This reservation has been archived and cannot be modified.",
+                            "This reservation has been archived and cannot be modified",
                             fontSize = 13.sp,
                             color = Color(0xFFD32F2F)
                         )
@@ -612,7 +650,7 @@ private fun ReservationDetailCard(
         }
     }
 
-    // ✅ SIMPLIFIED PAYMENT DIALOG - No items section
+    // ✅ SIMPLIFIED PAYMENT DIALOG
     if (showPaymentDialog && paymentData != null) {
         SimplifiedPaymentReceiptDialog(
             payment = paymentData!!,
